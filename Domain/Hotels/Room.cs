@@ -38,7 +38,6 @@ public sealed class Room
         PricePerNight = pricePerNight;
         Visible = true;
         Accommodation = AccommodationType.HotelRoom;
-        CreatedAt = DateTimeOffset.UtcNow;
     }
 
     private Room()

@@ -43,7 +43,6 @@ public sealed class Hotel
         Country = country;
         City = city;
         CancelFreeDaysBefore = 3;
-        SubmittedAt = DateTimeOffset.UtcNow;
     }
 
     private Hotel()
