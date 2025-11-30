@@ -1,0 +1,21 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Application.Commands
+{
+	public sealed record SearchHotelsQuery(
+		string? Country = null,
+		string? City = null,
+		string? District = null,
+		DateTime? StartDate = null,
+		DateTime? EndDate = null,
+		int? GuestsCount = null,
+		bool? WithPets = null,
+		bool? IsPetHotelOnly = null,
+		string? Accommodation = null,
+		decimal? MinPrice = null,
+		decimal? MaxPrice = null);
+}
