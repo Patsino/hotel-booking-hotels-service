@@ -225,18 +225,58 @@ namespace Api.Controllers
 			return Ok(results);
 		}
 
-		[Authorize(Policy = "HotelOwnerOrAdmin")]
+		//[Authorize(Policy = "HotelOwnerOrAdmin")]
+		//[HttpGet("{hotelId}/rooms")]
+		//public async Task<IActionResult> GetRooms(int hotelId, [FromQuery] bool includeHidden = false)
+		//{
+		//	var hotel = await _hotelsRepo.GetByIdAsync(hotelId);
+		//	if (hotel == null)
+		//		return NotFound();
+
+		//	// Check authorization - only owner or admin can see all rooms
+		//	var canSeeHidden = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
+
+		//	var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, canSeeHidden && includeHidden);
+		//	return Ok(rooms.Select(r => new
+		//	{
+		//		r.Id,
+		//		r.HotelId,
+		//		r.RoomNumber,
+		//		r.Description,
+		//		r.Capacity,
+		//		r.Bedrooms,
+		//		r.PricePerNight,
+		//		r.Visible,
+		//		r.PetsAllowed,
+		//		Accommodation = r.Accommodation.ToString(),
+		//		r.CreatedAt
+		//	}));
+		//}
+
 		[HttpGet("{hotelId}/rooms")]
-		public async Task<IActionResult> GetRooms(int hotelId, [FromQuery] bool includeHidden = false)
+		public async Task<IActionResult> GetHotelRooms(int hotelId)
 		{
 			var hotel = await _hotelsRepo.GetByIdAsync(hotelId);
 			if (hotel == null)
 				return NotFound();
 
-			// Check authorization - only owner or admin can see all rooms
+			// Only show approved hotels to public
+			if (!_currentUser.IsAuthenticated)
+			{
+				if (hotel.Approval != ApprovalStatus.Approved)
+					return NotFound();
+			}
+			else if (!_currentUser.IsAdmin && hotel.OwnerId != _currentUser.UserId)
+			{
+				if (hotel.Approval != ApprovalStatus.Approved)
+					return NotFound();
+			}
+
+			// Determine if user can see hidden rooms
 			var canSeeHidden = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
 
-			var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, canSeeHidden && includeHidden);
+			var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, includeHidden: canSeeHidden);
+
 			return Ok(rooms.Select(r => new
 			{
 				r.Id,

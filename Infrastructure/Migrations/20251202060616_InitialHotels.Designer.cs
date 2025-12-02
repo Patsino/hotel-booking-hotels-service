@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(HotelsDbContext))]
-    [Migration("20251125211333_InitialUsers")]
-    partial class InitialUsers
+    [Migration("20251202060616_InitialHotels")]
+    partial class InitialHotels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -138,7 +138,7 @@ namespace Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HotelBooking.Hotels.Domain.Hotels.Room", b =>
+            modelBuilder.Entity("Room", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -243,6 +243,16 @@ namespace Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Rooms_Price_NonNegative", "[PricePerNight] >= 0");
                         });
+                });
+
+            modelBuilder.Entity("Room", b =>
+                {
+                    b.HasOne("HotelBooking.Hotels.Domain.Hotels.Hotel", null)
+                        .WithMany()
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Rooms_HotelId_Hotels_Id");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialUsers : Migration
+    public partial class InitialHotels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -67,6 +67,13 @@ namespace Infrastructure.Migrations
                     table.CheckConstraint("CK_Rooms_Bedrooms_Positive", "[Bedrooms] >= 1");
                     table.CheckConstraint("CK_Rooms_Capacity_Positive", "[Capacity] >= 1");
                     table.CheckConstraint("CK_Rooms_Price_NonNegative", "[PricePerNight] >= 0");
+                    table.ForeignKey(
+                        name: "FK_Rooms_HotelId_Hotels_Id",
+                        column: x => x.HotelId,
+                        principalSchema: "hotels",
+                        principalTable: "Hotels",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -160,11 +167,11 @@ namespace Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Hotels",
+                name: "Rooms",
                 schema: "hotels");
 
             migrationBuilder.DropTable(
-                name: "Rooms",
+                name: "Hotels",
                 schema: "hotels");
         }
     }

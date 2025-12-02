@@ -80,10 +80,6 @@ using (var scope = app.Services.CreateScope())
 		await dbContext.Database.MigrateAsync();
 		logger.LogInformation("Database migration completed");
 
-		// Wait for Users service to seed first (dependency on user IDs)
-		logger.LogInformation("Waiting 5 seconds for Users service to seed...");
-		await Task.Delay(5000);
-
 		logger.LogInformation("Starting database seeding...");
 		var seeder = services.GetRequiredService<HotelsDataSeeder>();
 		await seeder.SeedAsync();

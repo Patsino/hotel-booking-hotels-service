@@ -135,7 +135,7 @@ namespace Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("HotelBooking.Hotels.Domain.Hotels.Room", b =>
+            modelBuilder.Entity("Room", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -240,6 +240,16 @@ namespace Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Rooms_Price_NonNegative", "[PricePerNight] >= 0");
                         });
+                });
+
+            modelBuilder.Entity("Room", b =>
+                {
+                    b.HasOne("HotelBooking.Hotels.Domain.Hotels.Hotel", null)
+                        .WithMany()
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Rooms_HotelId_Hotels_Id");
                 });
 #pragma warning restore 612, 618
         }

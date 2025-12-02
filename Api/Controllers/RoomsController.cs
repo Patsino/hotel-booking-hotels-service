@@ -64,15 +64,18 @@ namespace Api.Controllers
 			if (room == null)
 				return NotFound();
 
-			// Check if user should see this room
 			var hotel = await _hotelsRepo.GetByIdAsync(room.HotelId);
 			if (hotel == null)
 				return NotFound();
 
-			// Only show visible rooms to public, or any room to owner/admin
-			if (!room.Visible && !_currentUser.IsAdmin && hotel.OwnerId != _currentUser.UserId)
+			if (!room.Visible)
 			{
-				return NotFound();
+				var canSeeHidden = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
+
+				if (!canSeeHidden)
+				{
+					return NotFound();
+				}
 			}
 
 			return Ok(new

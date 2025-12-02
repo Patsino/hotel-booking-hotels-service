@@ -25,6 +25,9 @@ namespace Infrastructure.Repositories
 		public async Task<List<Hotel>> GetPendingAsync(CancellationToken ct = default)
 			=> await _context.Hotels.Where(h => h.Approval == ApprovalStatus.Pending).ToListAsync(ct);
 
+		public async Task<List<Hotel>> GetAllAsync(CancellationToken ct = default)
+			=> await _context.Hotels.OrderByDescending(h => h.SubmittedAt).ToListAsync(ct);
+
 		public async Task<List<Hotel>> SearchAsync(
 			string? country, string? city, string? district,
 			bool? petsAllowed, bool? isPetHotelOnly,

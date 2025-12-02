@@ -18,14 +18,15 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("HotelsDatabase");
+		var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__HotelBookingDatabase");
 
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException("ConnectionStrings:HotelsDatabase is not configured.");
-        }
+		if (string.IsNullOrWhiteSpace(connectionString))
+		{
+			connectionString = configuration.GetConnectionString("HotelBookingDatabase") ??
+				throw new InvalidOperationException("ConnectionStrings:HotelBookingDatabase is not configured.");
+		}
 
-        services.AddDbContext<HotelsDbContext>(options =>
+		services.AddDbContext<HotelsDbContext>(options =>
         {
             options.UseSqlServer(connectionString, sqlOptions =>
             {

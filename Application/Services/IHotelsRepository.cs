@@ -12,6 +12,7 @@ namespace Application.Services
 		Task<Hotel?> GetByIdAsync(int id, CancellationToken ct = default);
 		Task<List<Hotel>> GetByOwnerIdAsync(int ownerId, CancellationToken ct = default);
 		Task<List<Hotel>> GetPendingAsync(CancellationToken ct = default);
+		Task<List<Hotel>> GetAllAsync(CancellationToken ct = default);
 		Task<List<Hotel>> SearchAsync(
 			string? country, string? city, string? district,
 			bool? petsAllowed, bool? isPetHotelOnly,

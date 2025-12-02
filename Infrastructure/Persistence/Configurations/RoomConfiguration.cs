@@ -36,7 +36,13 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
             .HasColumnName("HotelId")
             .IsRequired();
 
-        builder.Property(room => room.RoomNumber)
+		builder.HasOne<Hotel>()
+			.WithMany()
+			.HasForeignKey(nameof(Room.HotelId))
+			.HasConstraintName("FK_Rooms_HotelId_Hotels_Id")
+			.OnDelete(DeleteBehavior.Cascade);
+
+		builder.Property(room => room.RoomNumber)
             .HasColumnName("RoomNumber")
             .HasMaxLength(50);
 
