@@ -156,74 +156,89 @@ namespace Api.Controllers
 		[HttpGet("search")]
 		public async Task<IActionResult> Search([FromQuery] SearchHotelsQuery query)
 		{
-			// Public endpoint - anyone can search
-			var hotels = await _hotelsRepo.SearchAsync(
-				query.Country, query.City, query.District,
-				query.WithPets, query.IsPetHotelOnly);
-
-			if (!hotels.Any())
-				return Ok(new List<object>());
-
-			var hotelIds = hotels.Select(h => h.Id).ToList();
-
-			var rooms = await _roomsRepo.SearchRoomsAsync(
-				hotelIds, query.GuestsCount, query.Accommodation,
-				query.MinPrice, query.MaxPrice, query.WithPets);
-
-			// If date filtering requested, check availability
-			if (query.StartDate.HasValue && query.EndDate.HasValue)
+			try
 			{
-				var reservationsClient = _httpClientFactory.CreateClient("ReservationsService");
-				var availableRoomIds = new List<int>();
-
-				foreach (var room in rooms)
-				{
-					var response = await reservationsClient.GetAsync(
-						$"/internal/reservations/room/{room.Id}/busy-ranges?start={query.StartDate:yyyy-MM-dd}&end={query.EndDate:yyyy-MM-dd}");
-
-					if (response.IsSuccessStatusCode)
-					{
-						var busyRanges = await response.Content.ReadFromJsonAsync<List<object>>();
-						if (busyRanges?.Count == 0)
-						{
-							availableRoomIds.Add(room.Id);
-						}
-					}
-				}
-
-				rooms = rooms.Where(r => availableRoomIds.Contains(r.Id)).ToList();
+				var results = await _hotelsRepo.SearchAvailableHotelsAsync(query);
+				return Ok(results);
 			}
-
-			var results = hotels
-				.Select(h => new
-				{
-					h.Id,
-					h.Name,
-					h.Description,
-					h.Country,
-					h.City,
-					h.District,
-					h.AddressLine,
-					h.PetsAllowed,
-					h.IsPetHotel,
-					h.CancelFreeDaysBefore,
-					Rooms = rooms.Where(r => r.HotelId == h.Id).Select(r => new
-					{
-						r.Id,
-						r.RoomNumber,
-						r.Description,
-						r.Capacity,
-						r.Bedrooms,
-						r.PricePerNight,
-						r.PetsAllowed,
-						Accommodation = r.Accommodation.ToString()
-					})
-				})
-				.Where(h => h.Rooms.Any())
-				.ToList();
-
-			return Ok(results);
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error during hotel search");
+				return StatusCode(500, new { error = "Search failed" });
+			}
 		}
+
+		//[HttpGet("search")]
+		//public async Task<IActionResult> Search([FromQuery] SearchHotelsQuery query)
+		//{
+		//	// Public endpoint - anyone can search
+		//	var hotels = await _hotelsRepo.SearchAsync(
+		//		query.Country, query.City, query.District,
+		//		query.WithPets, query.IsPetHotelOnly);
+
+		//	if (!hotels.Any())
+		//		return Ok(new List<object>());
+
+		//	var hotelIds = hotels.Select(h => h.Id).ToList();
+
+		//	var rooms = await _roomsRepo.SearchRoomsAsync(
+		//		hotelIds, query.GuestsCount, query.Accommodation,
+		//		query.MinPrice, query.MaxPrice, query.WithPets);
+
+		//	// If date filtering requested, check availability
+		//	if (query.StartDate.HasValue && query.EndDate.HasValue)
+		//	{
+		//		var reservationsClient = _httpClientFactory.CreateClient("ReservationsService");
+		//		var availableRoomIds = new List<int>();
+
+		//		foreach (var room in rooms)
+		//		{
+		//			var response = await reservationsClient.GetAsync(
+		//				$"/internal/reservations/room/{room.Id}/busy-ranges?start={query.StartDate:yyyy-MM-dd}&end={query.EndDate:yyyy-MM-dd}");
+
+		//			if (response.IsSuccessStatusCode)
+		//			{
+		//				var busyRanges = await response.Content.ReadFromJsonAsync<List<object>>();
+		//				if (busyRanges?.Count == 0)
+		//				{
+		//					availableRoomIds.Add(room.Id);
+		//				}
+		//			}
+		//		}
+
+		//		rooms = rooms.Where(r => availableRoomIds.Contains(r.Id)).ToList();
+		//	}
+
+		//	var results = hotels
+		//		.Select(h => new
+		//		{
+		//			h.Id,
+		//			h.Name,
+		//			h.Description,
+		//			h.Country,
+		//			h.City,
+		//			h.District,
+		//			h.AddressLine,
+		//			h.PetsAllowed,
+		//			h.IsPetHotel,
+		//			h.CancelFreeDaysBefore,
+		//			Rooms = rooms.Where(r => r.HotelId == h.Id).Select(r => new
+		//			{
+		//				r.Id,
+		//				r.RoomNumber,
+		//				r.Description,
+		//				r.Capacity,
+		//				r.Bedrooms,
+		//				r.PricePerNight,
+		//				r.PetsAllowed,
+		//				Accommodation = r.Accommodation.ToString()
+		//			})
+		//		})
+		//		.Where(h => h.Rooms.Any())
+		//		.ToList();
+
+		//	return Ok(results);
+		//}
 
 		//[Authorize(Policy = "HotelOwnerOrAdmin")]
 		//[HttpGet("{hotelId}/rooms")]

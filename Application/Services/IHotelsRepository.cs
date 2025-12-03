@@ -1,4 +1,6 @@
-﻿using HotelBooking.Hotels.Domain.Hotels;
+﻿using Application.Commands;
+using Application.Dtos;
+using HotelBooking.Hotels.Domain.Hotels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,5 +21,6 @@ namespace Application.Services
 			CancellationToken ct = default);
 		Task AddAsync(Hotel hotel, CancellationToken ct = default);
 		Task SaveChangesAsync(CancellationToken ct = default);
+		Task<List<HotelSearchResultDto>> SearchAvailableHotelsAsync(SearchHotelsQuery query, CancellationToken ct = default);
 	}
 }
