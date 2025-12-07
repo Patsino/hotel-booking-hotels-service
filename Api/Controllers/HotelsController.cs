@@ -168,105 +168,7 @@ namespace Api.Controllers
 			}
 		}
 
-		//[HttpGet("search")]
-		//public async Task<IActionResult> Search([FromQuery] SearchHotelsQuery query)
-		//{
-		//	// Public endpoint - anyone can search
-		//	var hotels = await _hotelsRepo.SearchAsync(
-		//		query.Country, query.City, query.District,
-		//		query.WithPets, query.IsPetHotelOnly);
 
-		//	if (!hotels.Any())
-		//		return Ok(new List<object>());
-
-		//	var hotelIds = hotels.Select(h => h.Id).ToList();
-
-		//	var rooms = await _roomsRepo.SearchRoomsAsync(
-		//		hotelIds, query.GuestsCount, query.Accommodation,
-		//		query.MinPrice, query.MaxPrice, query.WithPets);
-
-		//	// If date filtering requested, check availability
-		//	if (query.StartDate.HasValue && query.EndDate.HasValue)
-		//	{
-		//		var reservationsClient = _httpClientFactory.CreateClient("ReservationsService");
-		//		var availableRoomIds = new List<int>();
-
-		//		foreach (var room in rooms)
-		//		{
-		//			var response = await reservationsClient.GetAsync(
-		//				$"/internal/reservations/room/{room.Id}/busy-ranges?start={query.StartDate:yyyy-MM-dd}&end={query.EndDate:yyyy-MM-dd}");
-
-		//			if (response.IsSuccessStatusCode)
-		//			{
-		//				var busyRanges = await response.Content.ReadFromJsonAsync<List<object>>();
-		//				if (busyRanges?.Count == 0)
-		//				{
-		//					availableRoomIds.Add(room.Id);
-		//				}
-		//			}
-		//		}
-
-		//		rooms = rooms.Where(r => availableRoomIds.Contains(r.Id)).ToList();
-		//	}
-
-		//	var results = hotels
-		//		.Select(h => new
-		//		{
-		//			h.Id,
-		//			h.Name,
-		//			h.Description,
-		//			h.Country,
-		//			h.City,
-		//			h.District,
-		//			h.AddressLine,
-		//			h.PetsAllowed,
-		//			h.IsPetHotel,
-		//			h.CancelFreeDaysBefore,
-		//			Rooms = rooms.Where(r => r.HotelId == h.Id).Select(r => new
-		//			{
-		//				r.Id,
-		//				r.RoomNumber,
-		//				r.Description,
-		//				r.Capacity,
-		//				r.Bedrooms,
-		//				r.PricePerNight,
-		//				r.PetsAllowed,
-		//				Accommodation = r.Accommodation.ToString()
-		//			})
-		//		})
-		//		.Where(h => h.Rooms.Any())
-		//		.ToList();
-
-		//	return Ok(results);
-		//}
-
-		//[Authorize(Policy = "HotelOwnerOrAdmin")]
-		//[HttpGet("{hotelId}/rooms")]
-		//public async Task<IActionResult> GetRooms(int hotelId, [FromQuery] bool includeHidden = false)
-		//{
-		//	var hotel = await _hotelsRepo.GetByIdAsync(hotelId);
-		//	if (hotel == null)
-		//		return NotFound();
-
-		//	// Check authorization - only owner or admin can see all rooms
-		//	var canSeeHidden = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
-
-		//	var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, canSeeHidden && includeHidden);
-		//	return Ok(rooms.Select(r => new
-		//	{
-		//		r.Id,
-		//		r.HotelId,
-		//		r.RoomNumber,
-		//		r.Description,
-		//		r.Capacity,
-		//		r.Bedrooms,
-		//		r.PricePerNight,
-		//		r.Visible,
-		//		r.PetsAllowed,
-		//		Accommodation = r.Accommodation.ToString(),
-		//		r.CreatedAt
-		//	}));
-		//}
 
 		[HttpGet("{hotelId}/rooms")]
 		public async Task<IActionResult> GetHotelRooms(int hotelId)
@@ -275,22 +177,13 @@ namespace Api.Controllers
 			if (hotel == null)
 				return NotFound();
 
-			// Only show approved hotels to public
-			if (!_currentUser.IsAuthenticated)
-			{
-				if (hotel.Approval != ApprovalStatus.Approved)
-					return NotFound();
-			}
-			else if (!_currentUser.IsAdmin && hotel.OwnerId != _currentUser.UserId)
-			{
-				if (hotel.Approval != ApprovalStatus.Approved)
-					return NotFound();
-			}
+			// Determine if user can see hidden rooms and hotels
+			var isOwnerOrAdmin = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
 
-			// Determine if user can see hidden rooms
-			var canSeeHidden = _currentUser.IsAdmin || hotel.OwnerId == _currentUser.UserId;
+            if (hotel.Approval != ApprovalStatus.Approved && !isOwnerOrAdmin)
+                return NotFound();
 
-			var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, includeHidden: canSeeHidden);
+            var rooms = await _roomsRepo.GetByHotelIdAsync(hotelId, includeHidden: isOwnerOrAdmin);
 
 			return Ok(rooms.Select(r => new
 			{

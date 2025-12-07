@@ -16,23 +16,34 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string? environmentName = null)
     {
-		var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__HotelBookingDatabase");
-
-		if (string.IsNullOrWhiteSpace(connectionString))
-		{
-			connectionString = configuration.GetConnectionString("HotelBookingDatabase") ??
-				throw new InvalidOperationException("ConnectionStrings:HotelBookingDatabase is not configured.");
-		}
-
-		services.AddDbContext<HotelsDbContext>(options =>
+        if (environmentName == "Testing")
         {
-            options.UseSqlServer(connectionString, sqlOptions =>
+            services.AddDbContext<HotelsDbContext>(options =>
             {
-                sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "hotels");
+                options.UseInMemoryDatabase("TestDatabase");
             });
-        });
+        }
+        else
+        {
+            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__HotelBookingDatabase");
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                connectionString = configuration.GetConnectionString("HotelBookingDatabase") ??
+                    throw new InvalidOperationException("ConnectionStrings:HotelBookingDatabase is not configured.");
+            }
+
+            services.AddDbContext<HotelsDbContext>(options =>
+            {
+                options.UseSqlServer(connectionString, sqlOptions =>
+                {
+                    sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "hotels");
+                });
+            });
+        }
 
 		services.AddScoped<IHotelsRepository, HotelsRepository>();
 		services.AddScoped<IRoomsRepository, RoomsRepository>();

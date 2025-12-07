@@ -1,9 +1,11 @@
 ﻿using Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Api.Controllers
 {
+	[ExcludeFromCodeCoverage]
 	[Authorize(Policy = "ServiceToService")]
 	[ApiController]
 	[Route("internal/hotels")]

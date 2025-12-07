@@ -1,9 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HotelBooking.Hotels.Infrastructure.Persistence;
 
+[ExcludeFromCodeCoverage]
 public sealed class HotelsDbContextFactory : IDesignTimeDbContextFactory<HotelsDbContext>
 {
     public HotelsDbContext CreateDbContext(string[] args)

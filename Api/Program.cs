@@ -8,9 +8,8 @@ using Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.EnvironmentName);
 
-// ADD AUTHENTICATION
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 builder.Services.AddControllers();
@@ -27,7 +26,6 @@ builder.Services.AddSwaggerGen(c =>
 		Version = "v1"
 	});
 
-	// ADD SWAGGER AUTH
 	c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
 	{
 		Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token",
@@ -66,33 +64,31 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-//using (var scope = app.Services.CreateScope())
-//{
-//	var dbContext = scope.ServiceProvider.GetRequiredService<HotelsDbContext>();
-//	dbContext.Database.Migrate();
-//}
-
-using (var scope = app.Services.CreateScope())
+// Skip migration and seeding in Testing environment (InMemory database)
+if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalIgnoreCase))
 {
-	var services = scope.ServiceProvider;
-	var logger = services.GetRequiredService<ILogger<Program>>();
-
-	try
+	using (var scope = app.Services.CreateScope())
 	{
-		logger.LogInformation("Starting database migration...");
-		var dbContext = services.GetRequiredService<HotelsDbContext>();
-		await dbContext.Database.MigrateAsync();
-		logger.LogInformation("Database migration completed");
+		var services = scope.ServiceProvider;
+		var logger = services.GetRequiredService<ILogger<Program>>();
 
-		logger.LogInformation("Starting database seeding...");
-		var seeder = services.GetRequiredService<HotelsDataSeeder>();
-		await seeder.SeedAsync();
-		logger.LogInformation("Database seeding completed");
-	}
-	catch (Exception ex)
-	{
-		logger.LogError(ex, "An error occurred during migration or seeding");
-		throw;
+		try
+		{
+			logger.LogInformation("Starting database migration...");
+			var dbContext = services.GetRequiredService<HotelsDbContext>();
+			await dbContext.Database.MigrateAsync();
+			logger.LogInformation("Database migration completed");
+
+			logger.LogInformation("Starting database seeding...");
+			var seeder = services.GetRequiredService<HotelsDataSeeder>();
+			await seeder.SeedAsync();
+			logger.LogInformation("Database seeding completed");
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "An error occurred during migration or seeding");
+			throw;
+		}
 	}
 }
 
@@ -113,3 +109,6 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+// Required for WebApplicationFactory<Program> in integration tests
+public partial class Program { }
