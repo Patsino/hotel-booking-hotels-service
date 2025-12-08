@@ -5,6 +5,31 @@ using Microsoft.EntityFrameworkCore;
 using Infrastructure.Authentication;
 using Infrastructure.Seeding;
 using Api.Middleware;
+using DotNetEnv;
+
+// Load .env file from solution root directory
+var solutionRoot = Directory.GetCurrentDirectory();
+// Try to find .env in current directory or parent directories
+var envPath = Path.Combine(solutionRoot, ".env");
+if (!File.Exists(envPath))
+{
+    // If running from Api folder, go up one level
+    var parentDir = Directory.GetParent(solutionRoot)?.FullName;
+    if (parentDir != null)
+    {
+        envPath = Path.Combine(parentDir, ".env");
+    }
+}
+
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+    Console.WriteLine($"Loaded .env from: {envPath}");
+}
+else
+{
+    Console.WriteLine($"Warning: .env file not found. Looking in: {solutionRoot}");
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

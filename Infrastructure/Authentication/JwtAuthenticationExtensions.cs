@@ -19,8 +19,13 @@ namespace Infrastructure.Authentication
 			IConfiguration configuration)
 		{
 			var jwtSettings = configuration.GetSection("Jwt");
-			var secretKey = jwtSettings["SecretKey"]
-				?? throw new InvalidOperationException("JWT SecretKey not configured");
+			
+			// Get JWT settings from ENV variables first, then fall back to configuration
+			var secretKey = GetConfigValue(configuration, "Jwt:SecretKey", "Jwt__SecretKey")
+				?? throw new InvalidOperationException("JWT SecretKey not configured. Set Jwt__SecretKey environment variable or Jwt:SecretKey in configuration.");
+			
+			var issuer = GetConfigValue(configuration, "Jwt:Issuer", "Jwt__Issuer") ?? "HotelBooking";
+			var audience = GetConfigValue(configuration, "Jwt:Audience", "Jwt__Audience") ?? "HotelBookingUsers";
 
 			services.AddAuthentication(options =>
 			{
@@ -36,8 +41,8 @@ namespace Infrastructure.Authentication
 					ValidateAudience = true,
 					ValidateLifetime = true,
 					ValidateIssuerSigningKey = true,
-					ValidIssuer = jwtSettings["Issuer"],
-					ValidAudience = jwtSettings["Audience"],
+					ValidIssuer = issuer,
+					ValidAudience = audience,
 					IssuerSigningKey = new SymmetricSecurityKey(
 						Encoding.UTF8.GetBytes(secretKey)),
 					ClockSkew = TimeSpan.FromMinutes(5)
@@ -80,6 +85,20 @@ namespace Infrastructure.Authentication
 			});
 
 			return services;
+		}
+
+		/// <summary>
+		/// Gets configuration value from environment variable first, then falls back to IConfiguration.
+		/// </summary>
+		private static string? GetConfigValue(IConfiguration configuration, string configKey, string envKey)
+		{
+			var envValue = Environment.GetEnvironmentVariable(envKey);
+			if (!string.IsNullOrWhiteSpace(envValue))
+			{
+				return envValue;
+			}
+
+			return configuration[configKey];
 		}
 	}
 }

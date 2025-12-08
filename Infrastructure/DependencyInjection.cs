@@ -31,13 +31,8 @@ public static class DependencyInjection
         }
         else
         {
-            var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__HotelBookingDatabase");
-
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                connectionString = configuration.GetConnectionString("HotelBookingDatabase") ??
-                    throw new InvalidOperationException("ConnectionStrings:HotelBookingDatabase is not configured.");
-            }
+            var connectionString = GetConfigValue(configuration, "ConnectionStrings:HotelBookingDatabase", "ConnectionStrings__HotelBookingDatabase")
+                ?? throw new InvalidOperationException("ConnectionStrings:HotelBookingDatabase is not configured.");
 
             services.AddDbContext<HotelsDbContext>(options =>
             {
@@ -71,7 +66,8 @@ public static class DependencyInjection
 
 		services.AddHttpClient("ReservationsService", client =>
 		{
-			var baseUrl = configuration["ServiceUrls:Reservations"] ?? "http://localhost:5003";
+			var baseUrl = GetConfigValue(configuration, "ServiceUrls:Reservations", "ServiceUrls__Reservations") 
+				?? "http://reservations-service:8080";
 			client.BaseAddress = new Uri(baseUrl);
 			client.Timeout = TimeSpan.FromSeconds(100);
 		})
@@ -81,7 +77,8 @@ public static class DependencyInjection
 
 		services.AddHttpClient("HotelsService", client =>
 		{
-			var baseUrl = configuration["ServiceUrls:Hotels"] ?? "http://localhost:5002";
+			var baseUrl = GetConfigValue(configuration, "ServiceUrls:Hotels", "ServiceUrls__Hotels") 
+				?? "http://hotels-service:8080";
 			client.BaseAddress = new Uri(baseUrl);
 			client.Timeout = TimeSpan.FromSeconds(100);
 		})
@@ -91,7 +88,8 @@ public static class DependencyInjection
 
 		services.AddHttpClient("PaymentsService", client =>
 		{
-			var baseUrl = configuration["ServiceUrls:Payments"] ?? "http://localhost:5004";
+			var baseUrl = GetConfigValue(configuration, "ServiceUrls:Payments", "ServiceUrls__Payments") 
+				?? "http://payments-service:8080";
 			client.BaseAddress = new Uri(baseUrl);
 			client.Timeout = TimeSpan.FromSeconds(100);
 		})
@@ -101,7 +99,8 @@ public static class DependencyInjection
 
 		services.AddHttpClient("UsersService", client =>
 		{
-			var baseUrl = configuration["ServiceUrls:Users"] ?? "http://localhost:5001";
+			var baseUrl = GetConfigValue(configuration, "ServiceUrls:Users", "ServiceUrls__Users") 
+				?? "http://users-service:8080";
 			client.BaseAddress = new Uri(baseUrl);
 			client.Timeout = TimeSpan.FromSeconds(100);
 		})
@@ -116,5 +115,25 @@ public static class DependencyInjection
 		services.AddScoped<HotelsDataSeeder>();
 
 		return services;
+	}
+
+	/// <summary>
+	/// Gets configuration value from environment variable first, then falls back to IConfiguration.
+	/// </summary>
+	/// <param name="configuration">The configuration instance</param>
+	/// <param name="configKey">The IConfiguration key (e.g., "ServiceUrls:Reservations")</param>
+	/// <param name="envKey">The environment variable key (e.g., "ServiceUrls__Reservations")</param>
+	/// <returns>The configuration value or null if not found</returns>
+	private static string? GetConfigValue(IConfiguration configuration, string configKey, string envKey)
+	{
+		// Environment variable takes precedence
+		var envValue = Environment.GetEnvironmentVariable(envKey);
+		if (!string.IsNullOrWhiteSpace(envValue))
+		{
+			return envValue;
+		}
+
+		// Fall back to IConfiguration (which also reads from ENV with __ separator)
+		return configuration[configKey];
 	}
 }

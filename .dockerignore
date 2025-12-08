@@ -1,0 +1,83 @@
+# ===========================================
+# Hotel Booking Hotels Service - .dockerignore
+# ===========================================
+# Exclude files that shouldn't be in Docker image
+# ===========================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# NuGet
+**/packages/
+
+# Test results
+**/TestResults/
+**/*.trx
+**/coverage/
+
+# Documentation (optional, can be removed if docs needed in container)
+*.md
+!README.Docker.md
+
+# Environment files with secrets
+.env
+*.env.local
+*.env.*.local
+
+# Docker files (not needed inside container)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Logs
+**/*.log
+**/logs/
+
+# Temporary files
+**/tmp/
+**/temp/
+**/*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files
+**/*.pdb
+
+# Approval test files
+*.received.*
+
+# Benchmark results
+BenchmarkDotNet.Artifacts/
+
+# Local tool installations
+.config/
+
+# User secrets (if any local files)
+secrets.json
+**/secrets/
+
+# Azure deployment files
+.azure/
+
+# LaunchSettings (development only)
+**/Properties/launchSettings.json
