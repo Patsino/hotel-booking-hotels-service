@@ -28,7 +28,12 @@ namespace Application.Handlers
 				throw new InvalidOperationException("Hotel not found");
 			}
 
-			var accommodation = Enum.Parse<AccommodationType>(command.Accommodation, ignoreCase: true);
+			// Validate accommodation type
+			if (!Enum.TryParse<AccommodationType>(command.Accommodation, ignoreCase: true, out var accommodation))
+			{
+				throw new InvalidOperationException($"Invalid accommodation type: {command.Accommodation}");
+			}
+
 			var room = new Room(command.HotelId, command.Capacity, command.Bedrooms, command.PricePerNight);
 
 			await _repository.AddAsync(room, ct);
