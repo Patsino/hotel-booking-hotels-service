@@ -94,6 +94,9 @@ if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalI
 
 app.UseExceptionHandler();
 
+// Register correlation ID middleware EARLY in the pipeline
+app.UseMiddleware<Api.Middleware.CorrelationIdMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
 	app.UseSwagger();
