@@ -1,11 +1,12 @@
-﻿using HotelBooking.Hotels.Infrastructure.Persistence;
-using HotelBooking.Hotels.Infrastructure;
-using Microsoft.OpenApi.Models;
-using Microsoft.EntityFrameworkCore;
-using Infrastructure.Authentication;
-using Infrastructure.Seeding;
+﻿using Api.Filters;
 using Api.Middleware;
 using DotNetEnv;
+using HotelBooking.Hotels.Infrastructure;
+using HotelBooking.Hotels.Infrastructure.Persistence;
+using Infrastructure.Authentication;
+using Infrastructure.Seeding;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 // Load .env file from solution root directory
 var solutionRoot = Directory.GetCurrentDirectory();
@@ -74,6 +75,8 @@ builder.Services.AddSwaggerGen(c =>
 			Array.Empty<string>()
 		}
 	});
+
+	c.SchemaFilter<ExampleSchemaFilter>();
 });
 
 builder.Services.AddHealthChecks()

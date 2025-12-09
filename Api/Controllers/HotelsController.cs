@@ -135,24 +135,6 @@ namespace Api.Controllers
 			return NoContent();
 		}
 
-		[Authorize(Policy = "HotelOwnerOrAdmin")]
-		[HttpPost("{id}/submit")]
-		public async Task<IActionResult> Submit(int id)
-		{
-			var hotel = await _hotelsRepo.GetByIdAsync(id);
-			if (hotel == null)
-				return NotFound();
-
-			// Check authorization
-			_authorizationService.EnsureCanModifyResource(hotel.OwnerId);
-
-			hotel.Submit();
-			await _hotelsRepo.SaveChangesAsync();
-			_logger.LogInformation("Hotel submitted for review: {HotelId} by User {UserId}",
-				id, _currentUser.UserId);
-			return NoContent();
-		}
-
 		[HttpGet("search")]
 		public async Task<IActionResult> Search([FromQuery] SearchHotelsQuery query)
 		{

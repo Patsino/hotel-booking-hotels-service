@@ -257,35 +257,5 @@ public class HotelsControllerTests : IDisposable
 
     #endregion
 
-    #region Submit Tests
-
-    [Fact]
-    public async Task Submit_ShouldReturnNoContent_WhenOwnerSubmits()
-    {
-        // Arrange
-        var ownerId = 1;
-        var hotel = await SeedHotelAsync(ownerId: ownerId);
-        using var client = CreateClient(ownerId, "HotelOwner");
-
-        // Act
-        var response = await client.PostAsync($"/api/hotels/{hotel.Id}/submit", null);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-    }
-
-    [Fact]
-    public async Task Submit_ShouldReturnNotFound_WhenHotelDoesNotExist()
-    {
-        // Arrange
-        using var client = CreateClient(1, "HotelOwner");
-
-        // Act
-        var response = await client.PostAsync("/api/hotels/99999/submit", null);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    #endregion
 }
+
