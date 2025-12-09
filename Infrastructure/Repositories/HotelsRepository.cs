@@ -109,7 +109,17 @@ namespace Infrastructure.Repositories
 						ar.*,
 						CASE 
 							WHEN @StartDate IS NULL OR @EndDate IS NULL THEN 1
-							WHEN EXISTS (
+							-- Single-day reservation: check if any reservation includes this specific day
+							WHEN @StartDate = @EndDate AND EXISTS (
+								SELECT 1 
+								FROM reservations.Reservations res
+								WHERE res.RoomId = ar.RoomId
+									AND res.Status != 'Canceled'
+									AND res.StartDate <= @StartDate
+									AND res.EndDate >= @StartDate
+							) THEN 0
+							-- Multi-day reservation: use exclusive boundaries (adjacent don't overlap)
+							WHEN @StartDate < @EndDate AND EXISTS (
 								SELECT 1 
 								FROM reservations.Reservations res
 								WHERE res.RoomId = ar.RoomId
