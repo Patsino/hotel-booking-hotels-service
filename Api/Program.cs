@@ -48,8 +48,24 @@ builder.Services.AddSwaggerGen(c =>
 {
 	c.SwaggerDoc("v1", new OpenApiInfo
 	{
-		Title = "Hotel Booking - Hotels API",
-		Version = "v1"
+		Title = "Hotel Booking - Hotels Service API",
+		Version = "v1.0.0",
+		Description = @"Hotels microservice for managing hotels and rooms.
+
+**Features:**
+- Create and manage hotels (HotelOwner/Admin)
+- Search approved hotels by location, dates, capacity, pets
+- Manage rooms: create, update, hide/show
+- Admin approval workflow for new hotels
+
+**Authentication:** JWT Bearer token required for protected endpoints.
+
+**Roles:** User, HotelOwner, Admin",
+		Contact = new OpenApiContact
+		{
+			Name = "Hotel Booking System",
+			Email = "support@hotelbooking.com"
+		}
 	});
 
 	c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -76,6 +92,14 @@ builder.Services.AddSwaggerGen(c =>
 		}
 	});
 
+	var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+	var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+	if (File.Exists(xmlPath))
+	{
+		c.IncludeXmlComments(xmlPath);
+	}
+
+	c.EnableAnnotations();
 	c.SchemaFilter<ExampleSchemaFilter>();
 });
 

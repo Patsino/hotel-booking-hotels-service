@@ -6,6 +6,7 @@ using Infrastructure.Authentication;
 using Infrastructure.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Api.Controllers
 {
@@ -36,8 +37,47 @@ namespace Api.Controllers
 			_logger = logger;
 		}
 
+		/// <summary>
+		/// Create a new hotel
+		/// </summary>
+		/// <param name="command">Hotel details</param>
+		/// <returns>Created hotel ID</returns>
+		/// <remarks>
+		/// Creates a new hotel with Pending approval status. Requires HotelOwner or Admin role.
+		/// 
+		/// Sample request:
+		/// 
+		///     POST /api/hotels
+		///     {
+		///        "ownerId": 103,
+		///        "name": "Grand Plaza Hotel",
+		///        "country": "Latvia",
+		///        "city": "Riga",
+		///        "description": "Luxury 5-star hotel in the heart of Old Town",
+		///        "district": "Centrs",
+		///        "addressLine": "123 Brivibas Street",
+		///        "petsAllowed": true,
+		///        "isPetHotel": false,
+		///        "cancelFreeDaysBefore": 7
+		///     }
+		/// 
+		/// **Cancellation Policy:** cancelFreeDaysBefore defines free cancellation period (0-30 days)
+		/// </remarks>
+		/// <response code="201">Hotel created successfully, pending admin approval</response>
+		/// <response code="400">Invalid input data</response>
+		/// <response code="401">User not authenticated</response>
+		/// <response code="403">User is not HotelOwner or Admin</response>
 		[Authorize(Policy = "HotelOwnerOrAdmin")]
 		[HttpPost]
+		[SwaggerOperation(Summary = "Create hotel", Description = "Create new hotel with Pending status", OperationId = "CreateHotel", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(201, "Hotel created")]
+		[SwaggerResponse(400, "Invalid request")]
+		[SwaggerResponse(401, "Unauthorized")]
+		[SwaggerResponse(403, "Forbidden - HotelOwner or Admin role required")]
+		[ProducesResponseType(StatusCodes.Status201Created)]
+		[ProducesResponseType(StatusCodes.Status400BadRequest)]
+		[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+		[ProducesResponseType(StatusCodes.Status403Forbidden)]
 		public async Task<IActionResult> Create([FromBody] CreateHotelCommand command)
 		{
 			// Ensure user can only create hotels for themselves (unless admin)
@@ -58,7 +98,30 @@ namespace Api.Controllers
 			return CreatedAtAction(nameof(GetById), new { id = hotel.Id }, new { id = hotel.Id });
 		}
 
+		/// <summary>
+		/// Get hotel by ID
+		/// </summary>
+		/// <param name="id">Hotel ID</param>
+		/// <returns>Hotel details</returns>
+		/// <remarks>
+		/// Returns hotel details. Only approved hotels are visible to unauthenticated users and non-owners.
+		/// Hotel owners and admins can see their hotels in any status.
+		/// 
+		/// **Response includes:**
+		/// - id, ownerId, name, description
+		/// - country, city, district, addressLine
+		/// - petsAllowed, isPetHotel, cancelFreeDaysBefore
+		/// - approval (Pending, Approved, or Rejected)
+		/// - submittedAt, reviewedAt timestamps
+		/// </remarks>
+		/// <response code="200">Hotel details retrieved</response>
+		/// <response code="404">Hotel not found or not approved</response>
 		[HttpGet("{id}")]
+		[SwaggerOperation(Summary = "Get hotel by ID", Description = "Retrieve specific hotel details", OperationId = "GetHotelById", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(200, "Hotel details")]
+		[SwaggerResponse(404, "Hotel not found")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		public async Task<IActionResult> GetById(int id)
 		{
 			var hotel = await _hotelsRepo.GetByIdAsync(id);
@@ -96,8 +159,29 @@ namespace Api.Controllers
 			});
 		}
 
+		/// <summary>
+		/// Get current user's hotels
+		/// </summary>
+		/// <returns>List of hotels owned by current user</returns>
+		/// <remarks>
+		/// Returns all hotels created by the authenticated user (HotelOwner or Admin).
+		/// 
+		/// **No request parameters required.**
+		/// 
+		/// **Response includes:** id, name, country, city, approval status, submittedAt
+		/// </remarks>
+		/// <response code="200">List of user's hotels</response>
+		/// <response code="401">User not authenticated</response>
+		/// <response code="403">User is not HotelOwner or Admin</response>
 		[Authorize(Policy = "HotelOwnerOrAdmin")]
 		[HttpGet("mine")]
+		[SwaggerOperation(Summary = "Get my hotels", Description = "Retrieve hotels owned by current user", OperationId = "GetMyHotels", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(200, "List of hotels")]
+		[SwaggerResponse(401, "Unauthorized")]
+		[SwaggerResponse(403, "Forbidden - HotelOwner or Admin role required")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+		[ProducesResponseType(StatusCodes.Status403Forbidden)]
 		public async Task<IActionResult> GetMine()
 		{
 			if (!_currentUser.UserId.HasValue)
@@ -115,8 +199,43 @@ namespace Api.Controllers
 			}));
 		}
 
+		/// <summary>
+		/// Update hotel details
+		/// </summary>
+		/// <param name="id">Hotel ID to update</param>
+		/// <param name="command">Updated hotel details</param>
+		/// <returns>No content on success</returns>
+		/// <remarks>
+		/// Updates hotel information. Only hotel owner or admin can update.
+		/// 
+		/// Sample request:
+		/// 
+		///     PATCH /api/hotels/15
+		///     {
+		///        "name": "Updated Hotel Name",
+		///        "description": "New description",
+		///        "district": "Centrs",
+		///        "addressLine": "456 New Street",
+		///        "petsAllowed": true,
+		///        "isPetHotel": false,
+		///        "cancelFreeDaysBefore": 10
+		///     }
+		/// </remarks>
+		/// <response code="204">Hotel updated successfully</response>
+		/// <response code="401">User not authenticated</response>
+		/// <response code="403">User is not hotel owner or admin</response>
+		/// <response code="404">Hotel not found</response>
 		[Authorize(Policy = "HotelOwnerOrAdmin")]
 		[HttpPatch("{id}")]
+		[SwaggerOperation(Summary = "Update hotel", Description = "Update hotel details", OperationId = "UpdateHotel", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(204, "Hotel updated")]
+		[SwaggerResponse(401, "Unauthorized")]
+		[SwaggerResponse(403, "Forbidden")]
+		[SwaggerResponse(404, "Hotel not found")]
+		[ProducesResponseType(StatusCodes.Status204NoContent)]
+		[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+		[ProducesResponseType(StatusCodes.Status403Forbidden)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		public async Task<IActionResult> Update(int id, [FromBody] UpdateHotelCommand command)
 		{
 			var hotel = await _hotelsRepo.GetByIdAsync(id);
@@ -135,7 +254,37 @@ namespace Api.Controllers
 			return NoContent();
 		}
 
+		/// <summary>
+		/// Search for available hotels
+		/// </summary>
+		/// <param name="query">Search criteria including dates, location, guests, pets, price range</param>
+		/// <returns>List of hotels with available rooms matching criteria</returns>
+		/// <remarks>
+		/// Searches for approved hotels with available rooms.
+		/// 
+		/// **Query Parameters:**
+		/// - country, city, district: Location filters
+		/// - startDate, endDate: Check-in/out dates (YYYY-MM-DD format)
+		/// - guestsCount: Number of guests (1-20)
+		/// - withPets: Pet-friendly filter (true/false)
+		/// - isPetHotelOnly: Pet hotels only (true/false)
+		/// - accommodation: Room type (HotelRoom, Apartment, Villa, Bungalow, etc.)
+		/// - minPrice, maxPrice: Price range per night in EUR
+		/// 
+		/// **Example:**
+		///     GET /api/hotels/search?country=Latvia&amp;city=Riga&amp;startDate=2024-12-20&amp;endDate=2024-12-25&amp;guestsCount=2&amp;minPrice=50&amp;maxPrice=150
+		/// </remarks>
+		/// <response code="200">List of matching hotels with rooms and prices</response>
+		/// <response code="400">Invalid search parameters</response>
+		/// <response code="500">Search failed</response>
 		[HttpGet("search")]
+		[SwaggerOperation(Summary = "Search hotels", Description = "Find available hotels matching criteria", OperationId = "SearchHotels", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(200, "Search results")]
+		[SwaggerResponse(400, "Invalid parameters")]
+		[SwaggerResponse(500, "Search failed")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status400BadRequest)]
+		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 		public async Task<IActionResult> Search([FromQuery] SearchHotelsQuery query)
 		{
 			try
@@ -152,7 +301,30 @@ namespace Api.Controllers
 
 
 
+		/// <summary>
+		/// Get all rooms for a specific hotel
+		/// </summary>
+		/// <param name="hotelId">Hotel ID</param>
+		/// <returns>List of rooms in the hotel</returns>
+		/// <remarks>
+		/// Returns all rooms for a hotel. Only visible rooms are shown to non-owners/non-admins.
+		/// Hotel owners and admins can see all rooms including hidden ones.
+		/// 
+		/// **Response includes:**
+		/// - id, hotelId, roomNumber, description
+		/// - capacity, bedrooms, pricePerNight
+		/// - visible, petsAllowed
+		/// - accommodation (HotelRoom, Apartment, Villa, etc.)
+		/// - createdAt timestamp
+		/// </remarks>
+		/// <response code="200">List of rooms</response>
+		/// <response code="404">Hotel not found or not approved</response>
 		[HttpGet("{hotelId}/rooms")]
+		[SwaggerOperation(Summary = "Get hotel rooms", Description = "Retrieve all rooms for a hotel", OperationId = "GetHotelRooms", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(200, "List of rooms")]
+		[SwaggerResponse(404, "Hotel not found")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		public async Task<IActionResult> GetHotelRooms(int hotelId)
 		{
 			var hotel = await _hotelsRepo.GetByIdAsync(hotelId);
