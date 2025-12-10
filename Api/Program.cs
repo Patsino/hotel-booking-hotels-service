@@ -7,6 +7,7 @@ using Infrastructure.Authentication;
 using Infrastructure.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Polly;
 
 // Load .env file from solution root directory
 var solutionRoot = Directory.GetCurrentDirectory();
@@ -126,15 +127,58 @@ if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalI
 
 		try
 		{
-			logger.LogInformation("Starting database migration...");
 			var dbContext = services.GetRequiredService<HotelsDbContext>();
-			await dbContext.Database.MigrateAsync();
-			logger.LogInformation("Database migration completed");
 
-			logger.LogInformation("Starting database seeding...");
-			var seeder = services.GetRequiredService<HotelsDataSeeder>();
-			await seeder.SeedAsync();
-			logger.LogInformation("Database seeding completed");
+			// For Production (Azure Free tier with cold start), use retry logic with longer timeout
+			if (app.Environment.IsProduction())
+			{
+				logger.LogInformation("Production environment detected. Using retry policy for cold database start...");
+
+				// Configure retry policy with exponential backoff for cold Azure DB
+				var retryPolicy = Policy
+					.Handle<Exception>()
+					.WaitAndRetryAsync(
+						retryCount: 5,
+						sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), // 2, 4, 8, 16, 32 sec
+						onRetry: (exception, timeSpan, retryCount, context) =>
+						{
+							logger.LogWarning(
+								"Database connection attempt {RetryCount} failed. Waiting {WaitSeconds}s before next retry. Error: {Error}",
+								retryCount,
+								timeSpan.TotalSeconds,
+								exception.Message);
+						});
+
+				// Set longer command timeout for cold database (default is 30 sec)
+				dbContext.Database.SetCommandTimeout(TimeSpan.FromSeconds(90));
+
+				await retryPolicy.ExecuteAsync(async () =>
+				{
+					logger.LogInformation("Starting database migration...");
+					await dbContext.Database.MigrateAsync();
+					logger.LogInformation("Database migration completed");
+				});
+
+				await retryPolicy.ExecuteAsync(async () =>
+				{
+					logger.LogInformation("Starting database seeding...");
+					var seeder = services.GetRequiredService<HotelsDataSeeder>();
+					await seeder.SeedAsync();
+					logger.LogInformation("Database seeding completed");
+				});
+			}
+			else
+			{
+				// Development/Testing: use default behavior (fast local DB)
+				logger.LogInformation("Starting database migration...");
+				await dbContext.Database.MigrateAsync();
+				logger.LogInformation("Database migration completed");
+
+				logger.LogInformation("Starting database seeding...");
+				var seeder = services.GetRequiredService<HotelsDataSeeder>();
+				await seeder.SeedAsync();
+				logger.LogInformation("Database seeding completed");
+			}
 		}
 		catch (Exception ex)
 		{
