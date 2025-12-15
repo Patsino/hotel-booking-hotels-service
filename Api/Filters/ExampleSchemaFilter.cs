@@ -1,10 +1,12 @@
+using Application.Commands;
+using Application.Dtos;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using Application.Commands;
-using Application.Dtos;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Api.Filters;
+[ExcludeFromCodeCoverage]
 
 public class ExampleSchemaFilter : ISchemaFilter
 {

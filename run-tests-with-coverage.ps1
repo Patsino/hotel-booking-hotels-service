@@ -10,14 +10,15 @@ Write-Host ""
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptPath
 
-# Clean previous coverage reports
-if (Test-Path "Tests\CoverageReport") {
-    Write-Host "Cleaning previous coverage reports..." -ForegroundColor Yellow
-    Remove-Item "Tests\CoverageReport" -Recurse -Force
-}
+# Coverage paths
+$coverageDir = "Tests\coverage"
+$coverageCobertura = "Tests\coverage\coverage.cobertura.xml"
+$coverageReportDir = "Tests\coverage\report"
 
-if (Test-Path "Tests\coverage.cobertura.xml") {
-    Remove-Item "Tests\coverage.cobertura.xml" -Force
+# Clean previous coverage reports
+if (Test-Path $coverageDir) {
+    Write-Host "Cleaning previous coverage data..." -ForegroundColor Yellow
+    Remove-Item $coverageDir -Recurse -Force
 }
 
 Write-Host ""
@@ -42,7 +43,7 @@ Write-Host "All tests passed!" -ForegroundColor Green
 Write-Host ""
 
 # Check if coverage report was generated
-if (-not (Test-Path "Tests\coverage.cobertura.xml")) {
+if (-not (Test-Path $coverageCobertura)) {
     Write-Host "Coverage report not found. Please check Coverlet configuration." -ForegroundColor Red
     exit 1
 }
@@ -68,8 +69,8 @@ Write-Host "Generating HTML coverage report..." -ForegroundColor Green
 
 # Generate HTML report
 reportgenerator `
-    -reports:Tests\coverage.cobertura.xml `
-    -targetdir:Tests\CoverageReport `
+    -reports:$coverageCobertura `
+    -targetdir:$coverageReportDir `
     -reporttypes:"Html;Badges" `
     -verbosity:Warning
 
@@ -81,13 +82,14 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "Coverage report generated successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "Report location: Tests\CoverageReport\index.html" -ForegroundColor Cyan
+Write-Host "Report location: Tests\coverage\report\index.html" -ForegroundColor Cyan
 Write-Host ""
 
 # Display coverage summary
-if (Test-Path "Tests\CoverageReport\index.html") {
+$coverageIndex = "Tests\coverage\report\index.html"
+if (Test-Path $coverageIndex) {
     Write-Host "Opening coverage report in browser..." -ForegroundColor Green
-    Start-Process "Tests\CoverageReport\index.html"
+    Start-Process $coverageIndex
 }
 
 Write-Host ""

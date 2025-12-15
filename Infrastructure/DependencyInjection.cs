@@ -12,8 +12,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.Extensions.Http;
+using System.Diagnostics.CodeAnalysis;
 
 namespace HotelBooking.Hotels.Infrastructure;
+[ExcludeFromCodeCoverage]
 
 public static class DependencyInjection
 {
