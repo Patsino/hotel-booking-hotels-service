@@ -66,5 +66,48 @@ namespace Infrastructure.Http
 				return new List<int>();
 			}
 		}
+
+		public async Task<List<HotelReservationDto>> GetReservationsByRoomIdsAsync(
+			List<int> roomIds,
+			CancellationToken ct = default)
+		{
+			if (roomIds == null || roomIds.Count == 0)
+			{
+				return new List<HotelReservationDto>();
+			}
+
+			try
+			{
+				var client = _httpClientFactory.CreateClient("ReservationsService");
+				var request = new GetReservationsByRoomsRequest(roomIds);
+
+				_logger.LogDebug(
+					"Getting reservations for {RoomCount} rooms",
+					roomIds.Count);
+
+				var response = await client.PostAsJsonAsync("/internal/reservations/by-rooms", request, ct);
+
+				if (!response.IsSuccessStatusCode)
+				{
+					_logger.LogWarning(
+						"Get reservations by rooms failed with status {StatusCode}",
+						response.StatusCode);
+					return new List<HotelReservationDto>();
+				}
+
+				var result = await response.Content.ReadFromJsonAsync<List<HotelReservationDto>>(ct);
+				
+				_logger.LogDebug(
+					"Get reservations by rooms returned {ReservationCount} reservations",
+					result?.Count ?? 0);
+
+				return result ?? new List<HotelReservationDto>();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error getting reservations for {RoomCount} rooms", roomIds.Count);
+				return new List<HotelReservationDto>();
+			}
+		}
 	}
 }

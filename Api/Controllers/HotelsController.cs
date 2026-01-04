@@ -200,6 +200,85 @@ namespace Api.Controllers
 		}
 
 		/// <summary>
+		/// Get reservations for a specific hotel
+		/// </summary>
+		/// <param name="id">Hotel ID</param>
+		/// <returns>List of reservations for all rooms in the hotel</returns>
+		/// <remarks>
+		/// Returns all reservations for a hotel. Only the hotel owner or admin can access.
+		/// 
+		/// **Response includes:**
+		/// - id, userId, roomId
+		/// - startDate, endDate (YYYY-MM-DD format)
+		/// - guestsCount, guestsNames
+		/// - status (Pending, Held, Confirmed, Canceled)
+		/// - cancellationStatus (None, Requested, AutoCanceled, AdminApproved, AdminRejected)
+		/// - cancellationReason, cancellationRequestedAt
+		/// - createdAt timestamp
+		/// - roomNumber (from hotel's room data)
+		/// </remarks>
+		/// <response code="200">List of reservations</response>
+		/// <response code="401">User not authenticated</response>
+		/// <response code="403">User is not hotel owner or admin</response>
+		/// <response code="404">Hotel not found</response>
+		[Authorize(Policy = "HotelOwnerOrAdmin")]
+		[HttpGet("{id}/reservations")]
+		[SwaggerOperation(Summary = "Get hotel reservations", Description = "Retrieve all reservations for a hotel", OperationId = "GetHotelReservations", Tags = new[] { "Hotels" })]
+		[SwaggerResponse(200, "List of reservations")]
+		[SwaggerResponse(401, "Unauthorized")]
+		[SwaggerResponse(403, "Forbidden - must be hotel owner or admin")]
+		[SwaggerResponse(404, "Hotel not found")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+		[ProducesResponseType(StatusCodes.Status403Forbidden)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
+		public async Task<IActionResult> GetHotelReservations(int id)
+		{
+			var hotel = await _hotelsRepo.GetByIdAsync(id);
+			if (hotel == null)
+				return NotFound();
+
+			// Check authorization - only owner or admin can see reservations
+			_authorizationService.EnsureCanModifyResource(hotel.OwnerId);
+
+			// Get all rooms for this hotel
+			var rooms = await _roomsRepo.GetByHotelIdAsync(id);
+			if (rooms.Count == 0)
+			{
+				return Ok(new List<object>());
+			}
+
+			var roomIds = rooms.Select(r => r.Id).ToList();
+			var roomNumberMap = rooms.ToDictionary(r => r.Id, r => r.RoomNumber);
+
+			// Get reservations from Reservations Service
+			var reservations = await _reservationsClient.GetReservationsByRoomIdsAsync(roomIds);
+
+			// Enrich with room number
+			var result = reservations.Select(r => new
+			{
+				r.Id,
+				r.UserId,
+				r.RoomId,
+				RoomNumber = roomNumberMap.TryGetValue(r.RoomId, out var num) ? num : "Unknown",
+				r.StartDate,
+				r.EndDate,
+				r.GuestsCount,
+				r.GuestsNames,
+				r.Status,
+				r.CancellationStatus,
+				r.CancellationReason,
+				r.CancellationRequestedAt,
+				r.CreatedAt
+			});
+
+			_logger.LogInformation("Hotel {HotelId} reservations retrieved by User {UserId}: {Count} reservations",
+				id, _currentUser.UserId, reservations.Count);
+
+			return Ok(result);
+		}
+
+		/// <summary>
 		/// Update hotel details
 		/// </summary>
 		/// <param name="id">Hotel ID to update</param>

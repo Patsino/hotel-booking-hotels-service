@@ -22,6 +22,10 @@ namespace Api.Controllers
 			_logger = logger;
 		}
 
+		/// <summary>
+		/// Deactivate all hotels owned by a user.
+		/// Used by Users Service when user account is deleted (GDPR).
+		/// </summary>
 		[HttpPost("owners/{ownerId}/deactivate")]
 		public async Task<IActionResult> DeactivateOwnerHotels(int ownerId)
 		{

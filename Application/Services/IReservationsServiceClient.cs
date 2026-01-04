@@ -16,5 +16,13 @@ namespace Application.Services
 			DateTime startDate,
 			DateTime endDate,
 			CancellationToken ct = default);
+
+		/// <summary>
+		/// Gets all reservations for the specified room IDs.
+		/// Used by hotel owners to view reservations on their properties.
+		/// </summary>
+		Task<List<HotelReservationDto>> GetReservationsByRoomIdsAsync(
+			List<int> roomIds,
+			CancellationToken ct = default);
 	}
 }

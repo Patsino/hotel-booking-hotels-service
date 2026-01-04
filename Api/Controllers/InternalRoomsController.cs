@@ -25,6 +25,10 @@ namespace Api.Controllers
 			_logger = logger;
 		}
 
+		/// <summary>
+		/// Get room details including hotel info.
+		/// Used by Reservations Service to validate room before booking.
+		/// </summary>
 		[HttpGet("{roomId}/details")]
 		public async Task<IActionResult> GetRoomDetails(int roomId)
 		{
