@@ -9,13 +9,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Polly;
 
-// Load .env file from solution root directory
 var solutionRoot = Directory.GetCurrentDirectory();
-// Try to find .env in current directory or parent directories
 var envPath = Path.Combine(solutionRoot, ".env");
 if (!File.Exists(envPath))
 {
-    // If running from Api folder, go up one level
     var parentDir = Directory.GetParent(solutionRoot)?.FullName;
     if (parentDir != null)
     {
@@ -190,7 +187,6 @@ if (!app.Environment.EnvironmentName.Equals("Testing", StringComparison.OrdinalI
 
 app.UseExceptionHandler();
 
-// Register correlation ID middleware EARLY in the pipeline
 app.UseMiddleware<Api.Middleware.CorrelationIdMiddleware>();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())

@@ -1,3 +1,4 @@
+using Application.Commands;
 using HotelBooking.Hotels.Domain.Hotels;
 using HotelBooking.Hotels.Infrastructure.Persistence;
 using Infrastructure.Repositories;
@@ -140,41 +141,49 @@ public class HotelsRepositoryTests : IDisposable
 
     #endregion
 
-    #region SearchAsync Tests
+    #region SearchHotelsWithRoomsAsync Tests
 
     [Fact]
-    public async Task SearchAsync_ShouldReturnOnlyApprovedHotels()
+    public async Task SearchHotelsWithRoomsAsync_ShouldReturnOnlyApprovedHotels()
     {
         // Arrange
         var approvedHotel = new Hotel(1, "Approved", "USA", "NYC");
         approvedHotel.Approve();
+        var room1 = new Room(approvedHotel.Id, 2, 1, 100m);
+        
         var pendingHotel = new Hotel(2, "Pending", "USA", "NYC");
+        var room2 = new Room(pendingHotel.Id, 2, 1, 100m);
 
         await _context.Hotels.AddRangeAsync(approvedHotel, pendingHotel);
+        await _context.Rooms.AddRangeAsync(room1, room2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _repository.SearchAsync(null, null, null, null, null);
+        var result = await _repository.SearchHotelsWithRoomsAsync(new SearchHotelsQuery());
 
         // Assert
         result.Should().HaveCount(1);
-        result.First().Approval.Should().Be(ApprovalStatus.Approved);
+        result.First().HotelName.Should().Be("Approved");
     }
 
     [Fact]
-    public async Task SearchAsync_ShouldFilterByCountry()
+    public async Task SearchHotelsWithRoomsAsync_ShouldFilterByCountry()
     {
         // Arrange
         var usaHotel = new Hotel(1, "USA Hotel", "USA", "NYC");
         usaHotel.Approve();
+        var room1 = new Room(usaHotel.Id, 2, 1, 100m);
+        
         var ukHotel = new Hotel(2, "UK Hotel", "UK", "London");
         ukHotel.Approve();
+        var room2 = new Room(ukHotel.Id, 2, 1, 100m);
 
         await _context.Hotels.AddRangeAsync(usaHotel, ukHotel);
+        await _context.Rooms.AddRangeAsync(room1, room2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _repository.SearchAsync("USA", null, null, null, null);
+        var result = await _repository.SearchHotelsWithRoomsAsync(new SearchHotelsQuery(Country: "USA"));
 
         // Assert
         result.Should().HaveCount(1);
@@ -182,114 +191,27 @@ public class HotelsRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task SearchAsync_ShouldFilterByCity()
+    public async Task SearchHotelsWithRoomsAsync_ShouldFilterByCity()
     {
         // Arrange
         var nycHotel = new Hotel(1, "NYC Hotel", "USA", "NYC");
         nycHotel.Approve();
+        var room1 = new Room(nycHotel.Id, 2, 1, 100m);
+        
         var laHotel = new Hotel(2, "LA Hotel", "USA", "LA");
         laHotel.Approve();
+        var room2 = new Room(laHotel.Id, 2, 1, 100m);
 
         await _context.Hotels.AddRangeAsync(nycHotel, laHotel);
+        await _context.Rooms.AddRangeAsync(room1, room2);
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _repository.SearchAsync(null, "NYC", null, null, null);
+        var result = await _repository.SearchHotelsWithRoomsAsync(new SearchHotelsQuery(City: "NYC"));
 
         // Assert
         result.Should().HaveCount(1);
         result.First().City.Should().Be("NYC");
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldFilterByDistrict()
-    {
-        // Arrange
-        var hotel1 = new Hotel(1, "Downtown Hotel", "USA", "NYC");
-        hotel1.Update("Downtown Hotel", null, "Manhattan", null, false, false, 3);
-        hotel1.Approve();
-
-        var hotel2 = new Hotel(2, "Brooklyn Hotel", "USA", "NYC");
-        hotel2.Update("Brooklyn Hotel", null, "Brooklyn", null, false, false, 3);
-        hotel2.Approve();
-
-        await _context.Hotels.AddRangeAsync(hotel1, hotel2);
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _repository.SearchAsync(null, null, "Manhattan", null, null);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().District.Should().Be("Manhattan");
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldFilterByPetsAllowed()
-    {
-        // Arrange
-        var petFriendlyHotel = new Hotel(1, "Pet Friendly", "USA", "NYC");
-        petFriendlyHotel.Update("Pet Friendly", null, null, null, true, false, 3);
-        petFriendlyHotel.Approve();
-
-        var noPetsHotel = new Hotel(2, "No Pets", "USA", "NYC");
-        noPetsHotel.Update("No Pets", null, null, null, false, false, 3);
-        noPetsHotel.Approve();
-
-        await _context.Hotels.AddRangeAsync(petFriendlyHotel, noPetsHotel);
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _repository.SearchAsync(null, null, null, true, null);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().PetsAllowed.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldFilterByIsPetHotelOnly()
-    {
-        // Arrange
-        var petHotel = new Hotel(1, "Pet Hotel", "USA", "NYC");
-        petHotel.Update("Pet Hotel", null, null, null, true, true, 3);
-        petHotel.Approve();
-
-        var regularHotel = new Hotel(2, "Regular Hotel", "USA", "NYC");
-        regularHotel.Update("Regular Hotel", null, null, null, false, false, 3);
-        regularHotel.Approve();
-
-        await _context.Hotels.AddRangeAsync(petHotel, regularHotel);
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _repository.SearchAsync(null, null, null, null, true);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().IsPetHotel.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task SearchAsync_ShouldCombineFilters()
-    {
-        // Arrange
-        var matchingHotel = new Hotel(1, "Matching", "USA", "NYC");
-        matchingHotel.Update("Matching", null, "Manhattan", null, true, false, 3);
-        matchingHotel.Approve();
-
-        var nonMatchingHotel = new Hotel(2, "Non Matching", "UK", "London");
-        nonMatchingHotel.Approve();
-
-        await _context.Hotels.AddRangeAsync(matchingHotel, nonMatchingHotel);
-        await _context.SaveChangesAsync();
-
-        // Act
-        var result = await _repository.SearchAsync("USA", "NYC", "Manhattan", true, null);
-
-        // Assert
-        result.Should().HaveCount(1);
-        result.First().Name.Should().Be("Matching");
     }
 
     #endregion

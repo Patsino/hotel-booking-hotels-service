@@ -1,16 +1,9 @@
 ﻿using Application.Commands;
 using Application.Dtos;
 using Application.Services;
-using Dapper;
 using HotelBooking.Hotels.Domain.Hotels;
 using HotelBooking.Hotels.Infrastructure.Persistence;
-using Infrastructure.Repositories.Rows;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories
 {
@@ -32,166 +25,90 @@ namespace Infrastructure.Repositories
 		public async Task<List<Hotel>> GetAllAsync(CancellationToken ct = default)
 			=> await _context.Hotels.OrderByDescending(h => h.SubmittedAt).ToListAsync(ct);
 
-		public async Task<List<Hotel>> SearchAsync(
-			string? country, string? city, string? district,
-			bool? petsAllowed, bool? isPetHotelOnly,
-			CancellationToken ct = default)
-		{
-			var query = _context.Hotels.Where(h => h.Approval == ApprovalStatus.Approved);
-
-			if (!string.IsNullOrEmpty(country))
-				query = query.Where(h => h.Country == country);
-
-			if (!string.IsNullOrEmpty(city))
-				query = query.Where(h => h.City == city);
-
-			if (!string.IsNullOrEmpty(district))
-				query = query.Where(h => h.District == district);
-
-			if (petsAllowed == true)
-				query = query.Where(h => h.PetsAllowed || h.IsPetHotel);
-
-			if (isPetHotelOnly == true)
-				query = query.Where(h => h.IsPetHotel);
-
-			return await query.ToListAsync(ct);
-		}
-
 		public async Task AddAsync(Hotel hotel, CancellationToken ct = default)
 			=> await _context.Hotels.AddAsync(hotel, ct);
 
 		public async Task SaveChangesAsync(CancellationToken ct = default)
 			=> await _context.SaveChangesAsync(ct);
 
-		public async Task<List<HotelSearchResultDto>> SearchAvailableHotelsAsync(
+		public async Task<List<HotelSearchResultDto>> SearchHotelsWithRoomsAsync(
 			SearchHotelsQuery query,
 			CancellationToken ct = default)
 		{
-			// Build SQL query that joins across schemas in a SINGLE database call
-			var sql = @"
-				WITH AvailableRooms AS (
-					SELECT 
-						h.Id AS HotelId,
-						h.Name AS HotelName,
-						h.Description AS HotelDescription,
-						h.Country,
-						h.City,
-						h.District,
-						h.AddressLine,
-						h.PetsAllowed AS HotelPetsAllowed,
-						h.IsPetHotel,
-						h.CancelFreeDaysBefore,
-						r.Id AS RoomId,
-						r.RoomNumber,
-						r.Description AS RoomDescription,
-						r.Capacity,
-						r.Bedrooms,
-						r.PricePerNight,
-						r.PetsAllowed AS RoomPetsAllowed,
-						r.Accommodation
-					FROM hotels.Hotels h
-					INNER JOIN hotels.Rooms r ON h.Id = r.HotelId
-					WHERE 
-						h.Approval = 'Approved'
-						AND r.Visible = 1
-						AND (@Country IS NULL OR h.Country = @Country)
-						AND (@City IS NULL OR h.City = @City)
-						AND (@District IS NULL OR h.District = @District)
-						AND (@Capacity IS NULL OR r.Capacity >= @Capacity)
-						AND (@MinPrice IS NULL OR r.PricePerNight >= @MinPrice)
-						AND (@MaxPrice IS NULL OR r.PricePerNight <= @MaxPrice)
-						AND (@Accommodation IS NULL OR r.Accommodation = @Accommodation)
-						AND (@WithPets = 0 OR r.PetsAllowed = 1 OR h.PetsAllowed = 1 OR h.IsPetHotel = 1)
-						AND (@IsPetHotelOnly = 0 OR h.IsPetHotel = 1)
-				),
-				RoomAvailability AS (
-					SELECT 
-						ar.*,
-						CASE 
-							WHEN @StartDate IS NULL OR @EndDate IS NULL THEN 1
-							-- Single-day reservation: check if any reservation includes this specific day
-							WHEN @StartDate = @EndDate AND EXISTS (
-								SELECT 1 
-								FROM reservations.Reservations res
-								WHERE res.RoomId = ar.RoomId
-									AND res.Status != 'Canceled'
-									AND res.StartDate <= @StartDate
-									AND res.EndDate >= @StartDate
-							) THEN 0
-							-- Multi-day reservation: use exclusive boundaries (adjacent don't overlap)
-							WHEN @StartDate < @EndDate AND EXISTS (
-								SELECT 1 
-								FROM reservations.Reservations res
-								WHERE res.RoomId = ar.RoomId
-									AND res.Status != 'Canceled'
-									AND res.StartDate < @EndDate
-									AND res.EndDate > @StartDate
-							) THEN 0
-							ELSE 1
-						END AS IsAvailable
-					FROM AvailableRooms ar
-				)
-				SELECT *
-				FROM RoomAvailability
-				WHERE IsAvailable = 1
-				ORDER BY HotelId, PricePerNight";
+			var hotelsQuery = _context.Hotels
+				.Where(h => h.Approval == ApprovalStatus.Approved)
+				.AsQueryable();
 
-			var parameters = new
+			if (!string.IsNullOrEmpty(query.Country))
+				hotelsQuery = hotelsQuery.Where(h => h.Country == query.Country);
+
+			if (!string.IsNullOrEmpty(query.City))
+				hotelsQuery = hotelsQuery.Where(h => h.City == query.City);
+
+			if (!string.IsNullOrEmpty(query.District))
+				hotelsQuery = hotelsQuery.Where(h => h.District == query.District);
+
+			if (query.IsPetHotelOnly == true)
+				hotelsQuery = hotelsQuery.Where(h => h.IsPetHotel);
+
+			var hotels = await hotelsQuery
+				.Include(h => h.Rooms.Where(r => r.Visible))
+				.ToListAsync(ct);
+
+			var results = new List<HotelSearchResultDto>();
+
+			foreach (var hotel in hotels)
 			{
-				Country = query.Country,
-				City = query.City,
-				District = query.District,
-				Capacity = query.GuestsCount,
-				MinPrice = query.MinPrice,
-				MaxPrice = query.MaxPrice,
-				Accommodation = query.Accommodation,
-				WithPets = query.WithPets ?? false,
-				IsPetHotelOnly = query.IsPetHotelOnly ?? false,
-				StartDate = query.StartDate,
-				EndDate = query.EndDate
-			};
+				var rooms = hotel.Rooms.AsEnumerable();
 
-			List<HotelRoomRow> results;
+				if (query.GuestsCount.HasValue)
+					rooms = rooms.Where(r => r.Capacity >= query.GuestsCount.Value);
 
-			using (var connection = _context.Database.GetDbConnection())
-			{
-				await connection.OpenAsync(ct);
-				results = (await connection.QueryAsync<HotelRoomRow>(sql, parameters))
-					.ToList();
-			}
+				if (query.MinPrice.HasValue)
+					rooms = rooms.Where(r => r.PricePerNight >= query.MinPrice.Value);
 
-			// Group by hotel
-			var hotels = results
-				.GroupBy(r => r.HotelId)
-				.Select(g =>
+				if (query.MaxPrice.HasValue)
+					rooms = rooms.Where(r => r.PricePerNight <= query.MaxPrice.Value);
+
+				if (!string.IsNullOrEmpty(query.Accommodation))
 				{
-					var first = g.First();
-					return new HotelSearchResultDto(
-						first.HotelId,
-						first.HotelName,
-						first.HotelDescription,
-						first.Country,
-						first.City,
-						first.District,
-						first.AddressLine,
-						first.HotelPetsAllowed,
-						first.IsPetHotel,
-						first.CancelFreeDaysBefore,
-						g.Select(r => new RoomSearchResultDto(
-							r.RoomId,
+					if (Enum.TryParse<AccommodationType>(query.Accommodation, true, out var accommodationType))
+						rooms = rooms.Where(r => r.Accommodation == accommodationType);
+				}
+
+				if (query.WithPets == true)
+					rooms = rooms.Where(r => r.PetsAllowed || hotel.PetsAllowed || hotel.IsPetHotel);
+
+				var filteredRooms = rooms.ToList();
+
+				if (filteredRooms.Any())
+				{
+					results.Add(new HotelSearchResultDto(
+						hotel.Id,
+						hotel.Name,
+						hotel.Description,
+						hotel.Country,
+						hotel.City,
+						hotel.District,
+						hotel.AddressLine,
+						hotel.PetsAllowed,
+						hotel.IsPetHotel,
+						hotel.CancelFreeDaysBefore,
+						filteredRooms.Select(r => new RoomSearchResultDto(
+							r.Id,
 							r.RoomNumber,
-							r.RoomDescription,
+							r.Description,
 							r.Capacity,
 							r.Bedrooms,
 							r.PricePerNight,
-							r.RoomPetsAllowed,
-							r.Accommodation
-						)).ToList()
-					);
-				})
-				.ToList();
+							r.PetsAllowed,
+							r.Accommodation.ToString()
+						)).OrderBy(r => r.PricePerNight).ToList()
+					));
+				}
+			}
 
-			return hotels;
+			return results.OrderBy(h => h.HotelId).ToList();
 		}
 	}
 }

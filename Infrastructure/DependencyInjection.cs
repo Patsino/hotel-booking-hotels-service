@@ -53,10 +53,9 @@ public static class DependencyInjection
 
 		services.AddTransient<AuthenticatedHttpClientHandler>();
 
-	// Configure Polly retry and timeout policies for resilience
-	// Optimized: 3 retries with 0.5s, 1s, 2s delays (3.5s total) + 5s per-operation timeout
+
 	var retryPolicy = HttpPolicyExtensions
-		.HandleTransientHttpError() // Handles 5xx and 408
+		.HandleTransientHttpError() 
 		.WaitAndRetryAsync(
 			retryCount: 3,
 			sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(0.5 * Math.Pow(2, retryAttempt)),
@@ -113,6 +112,9 @@ public static class DependencyInjection
 		services.AddScoped<ICurrentUserService, CurrentUserService>();
 		services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
 
+		// HTTP client services for cross-service communication
+		services.AddScoped<IReservationsServiceClient, ReservationsServiceClient>();
+
 		services.AddScoped<HotelsDataSeeder>();
 
 		return services;
@@ -127,14 +129,12 @@ public static class DependencyInjection
 	/// <returns>The configuration value or null if not found</returns>
 	private static string? GetConfigValue(IConfiguration configuration, string configKey, string envKey)
 	{
-		// Environment variable takes precedence
 		var envValue = Environment.GetEnvironmentVariable(envKey);
 		if (!string.IsNullOrWhiteSpace(envValue))
 		{
 			return envValue;
 		}
 
-		// Fall back to IConfiguration (which also reads from ENV with __ separator)
 		return configuration[configKey];
 	}
 }

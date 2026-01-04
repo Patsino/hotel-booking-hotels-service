@@ -1,4 +1,4 @@
-﻿using HotelBooking.Hotels.Domain.Hotels;
+﻿namespace HotelBooking.Hotels.Domain.Hotels;
 
 public sealed class Room
 {

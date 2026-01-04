@@ -2,11 +2,6 @@
 using HotelBooking.Hotels.Domain.Hotels;
 using HotelBooking.Hotels.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories
 {
@@ -24,35 +19,6 @@ namespace Infrastructure.Repositories
 			var query = _context.Rooms.Where(r => r.HotelId == hotelId);
 			if (!includeHidden)
 				query = query.Where(r => r.Visible);
-			return await query.ToListAsync(ct);
-		}
-
-		public async Task<List<Room>> SearchRoomsAsync(
-			List<int> hotelIds, int? capacity, string? accommodation,
-			decimal? minPrice, decimal? maxPrice, bool? petsAllowed,
-			CancellationToken ct = default)
-		{
-			var query = _context.Rooms
-				.Where(r => hotelIds.Contains(r.HotelId) && r.Visible);
-
-			if (capacity.HasValue)
-				query = query.Where(r => r.Capacity >= capacity.Value);
-
-			if (!string.IsNullOrEmpty(accommodation))
-			{
-				var accommodationType = Enum.Parse<AccommodationType>(accommodation, true);
-				query = query.Where(r => r.Accommodation == accommodationType);
-			}
-
-			if (minPrice.HasValue)
-				query = query.Where(r => r.PricePerNight >= minPrice.Value);
-
-			if (maxPrice.HasValue)
-				query = query.Where(r => r.PricePerNight <= maxPrice.Value);
-
-			if (petsAllowed == true)
-				query = query.Where(r => r.PetsAllowed);
-
 			return await query.ToListAsync(ct);
 		}
 

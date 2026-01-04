@@ -18,6 +18,10 @@ public sealed class Hotel
 	public DateTimeOffset SubmittedAt { get; private set; }
 	public DateTimeOffset? ReviewedAt { get; private set; }
 
+	// Navigation property for rooms (read-only collection)
+	private readonly List<Room> _rooms = new();
+	public IReadOnlyCollection<Room> Rooms => _rooms.AsReadOnly();
+
 	public Hotel(int ownerId, string name, string country, string city)
 	{
 		OwnerId = ownerId;

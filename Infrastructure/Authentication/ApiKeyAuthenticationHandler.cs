@@ -2,14 +2,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Encodings.Web;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Authentication
 {

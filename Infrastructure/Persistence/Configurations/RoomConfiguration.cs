@@ -37,7 +37,7 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
             .IsRequired();
 
 		builder.HasOne<Hotel>()
-			.WithMany()
+			.WithMany(h => h.Rooms)
 			.HasForeignKey(nameof(Room.HotelId))
 			.HasConstraintName("FK_Rooms_HotelId_Hotels_Id")
 			.OnDelete(DeleteBehavior.Cascade);

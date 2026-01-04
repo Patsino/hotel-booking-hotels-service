@@ -1,4 +1,5 @@
 ﻿using Application.Commands;
+using Application.Dtos;
 using Application.Handlers;
 using Application.Services;
 using HotelBooking.Hotels.Domain.Hotels;
@@ -16,7 +17,7 @@ namespace Api.Controllers
 	{
 		private readonly IHotelsRepository _hotelsRepo;
 		private readonly IRoomsRepository _roomsRepo;
-		private readonly IHttpClientFactory _httpClientFactory;
+		private readonly IReservationsServiceClient _reservationsClient;
 		private readonly ICurrentUserService _currentUser;
 		private readonly IResourceAuthorizationService _authorizationService;
 		private readonly ILogger<HotelsController> _logger;
@@ -24,14 +25,14 @@ namespace Api.Controllers
 		public HotelsController(
 			IHotelsRepository hotelsRepo,
 			IRoomsRepository roomsRepo,
-			IHttpClientFactory httpClientFactory,
+			IReservationsServiceClient reservationsClient,
 			ICurrentUserService currentUser,
 			IResourceAuthorizationService authorizationService,
 			ILogger<HotelsController> logger)
 		{
 			_hotelsRepo = hotelsRepo;
 			_roomsRepo = roomsRepo;
-			_httpClientFactory = httpClientFactory;
+			_reservationsClient = reservationsClient;
 			_currentUser = currentUser;
 			_authorizationService = authorizationService;
 			_logger = logger;
@@ -80,7 +81,6 @@ namespace Api.Controllers
 		[ProducesResponseType(StatusCodes.Status403Forbidden)]
 		public async Task<IActionResult> Create([FromBody] CreateHotelCommand command)
 		{
-			// Ensure user can only create hotels for themselves (unless admin)
 			if (!_currentUser.IsAdmin && command.OwnerId != _currentUser.UserId)
 			{
 				return Forbid();
@@ -289,8 +289,57 @@ namespace Api.Controllers
 		{
 			try
 			{
-				var results = await _hotelsRepo.SearchAvailableHotelsAsync(query);
-				return Ok(results);
+				// Step 1: Get all hotels with rooms matching filters (from hotels schema only)
+				var hotelsWithRooms = await _hotelsRepo.SearchHotelsWithRoomsAsync(query);
+
+				// Step 2: If dates are provided, check room availability via Reservations service
+				if (query.StartDate.HasValue && query.EndDate.HasValue && hotelsWithRooms.Count > 0)
+				{
+					// Collect all room IDs from search results
+					var allRoomIds = hotelsWithRooms
+						.SelectMany(h => h.Rooms)
+						.Select(r => r.RoomId)
+						.ToList();
+
+					_logger.LogDebug(
+						"Checking availability for {RoomCount} rooms from {StartDate} to {EndDate}",
+						allRoomIds.Count, query.StartDate, query.EndDate);
+
+					// Get unavailable room IDs from Reservations service (batch call)
+					var unavailableRoomIds = await _reservationsClient.GetUnavailableRoomIdsAsync(
+						allRoomIds,
+						query.StartDate.Value,
+						query.EndDate.Value);
+
+					// Filter out unavailable rooms from results
+					if (unavailableRoomIds.Count > 0)
+					{
+						var unavailableSet = unavailableRoomIds.ToHashSet();
+
+						hotelsWithRooms = hotelsWithRooms
+							.Select(h => new HotelSearchResultDto(
+								h.HotelId,
+								h.HotelName,
+								h.Description,
+								h.Country,
+								h.City,
+								h.District,
+								h.AddressLine,
+								h.PetsAllowed,
+								h.IsPetHotel,
+								h.CancelFreeDaysBefore,
+								h.Rooms.Where(r => !unavailableSet.Contains(r.RoomId)).ToList()
+							))
+							.Where(h => h.Rooms.Count > 0) // Only keep hotels with available rooms
+							.ToList();
+
+						_logger.LogDebug(
+							"After availability filtering: {HotelCount} hotels with available rooms",
+							hotelsWithRooms.Count);
+					}
+				}
+
+				return Ok(hotelsWithRooms);
 			}
 			catch (Exception ex)
 			{
