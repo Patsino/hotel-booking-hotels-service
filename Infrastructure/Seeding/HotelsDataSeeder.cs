@@ -79,7 +79,7 @@ namespace Infrastructure.Seeding
 			var hotel3 = new Hotel(3, "Pet Paradise Hotel", "Lithuania", "Vilnius");
 			hotel3.Update(
 				"Pet Paradise Hotel",
-				"Special hotel for guests traveling with pets",
+                "Special hotel for pets",
 				"Pilaite",
 				"Pet Street 5",
 				true,
@@ -92,8 +92,8 @@ namespace Infrastructure.Seeding
 
 			var hotel3Rooms = new List<Room>
 		{
-			CreateRoom(hotel3.Id, "P1", "Pet-Friendly Single", 1, 1, 69.99m, AccommodationType.HotelRoom, true),
-			CreateRoom(hotel3.Id, "P2", "Pet-Friendly Double", 2, 1, 99.99m, AccommodationType.HotelRoom, true),
+			CreateRoom(hotel3.Id, "P1", "Pet Single", 1, 1, 69.99m, AccommodationType.HotelRoom, true),
+			CreateRoom(hotel3.Id, "P2", "Pet Double", 2, 1, 99.99m, AccommodationType.HotelRoom, true),
 			CreateRoom(hotel3.Id, "P3", "Pet Suite", 3, 2, 149.99m, AccommodationType.HotelRoom, true)
 		};
 
