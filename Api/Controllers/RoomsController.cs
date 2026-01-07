@@ -60,7 +60,7 @@ namespace Api.Controllers
 		/// - capacity: 1-20 guests
 		/// - bedrooms: 1-10
 		/// - pricePerNight: minimum €0.01
-		/// - accommodation: HotelRoom, Apartment, Villa, Bungalow, Studio, Suite, Dormitory
+		/// - accommodation: HotelRoom, Apartment, House, Cabin, Capsule
 		/// </remarks>
 		/// <response code="201">Room created successfully</response>
 		/// <response code="400">Invalid input or hotel not found</response>
@@ -111,7 +111,7 @@ namespace Api.Controllers
 		/// - id, hotelId, roomNumber, description
 		/// - capacity, bedrooms, pricePerNight
 		/// - visible, petsAllowed
-		/// - accommodation (HotelRoom, Apartment, Villa, etc.)
+		/// - accommodation (HotelRoom, Apartment, House, Cabin, Capsule)
 		/// - createdAt timestamp
 		/// </remarks>
 		/// <response code="200">Room details retrieved</response>

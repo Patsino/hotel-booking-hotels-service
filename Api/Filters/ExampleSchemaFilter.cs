@@ -67,7 +67,7 @@ public class ExampleSchemaFilter : ISchemaFilter
 				["roomNumber"] = new OpenApiString("201"),
 				["description"] = new OpenApiString("Family suite with two queen beds and balcony"),
 				["petsAllowed"] = new OpenApiBoolean(false),
-				["accommodation"] = new OpenApiString("Suite")
+				["accommodation"] = new OpenApiString("Apartment")
 			};
 		}
 		else if (context.Type == typeof(SearchHotelsQuery))

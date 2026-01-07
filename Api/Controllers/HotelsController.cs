@@ -347,7 +347,7 @@ namespace Api.Controllers
 		/// - guestsCount: Number of guests (1-20)
 		/// - withPets: Pet-friendly filter (true/false)
 		/// - isPetHotelOnly: Pet hotels only (true/false)
-		/// - accommodation: Room type (HotelRoom, Apartment, Villa, Bungalow, etc.)
+		/// - accommodation: Room type (HotelRoom, Apartment, House, Cabin, Capsule)
 		/// - minPrice, maxPrice: Price range per night in EUR
 		/// 
 		/// **Example:**
@@ -442,7 +442,7 @@ namespace Api.Controllers
 		/// - id, hotelId, roomNumber, description
 		/// - capacity, bedrooms, pricePerNight
 		/// - visible, petsAllowed
-		/// - accommodation (HotelRoom, Apartment, Villa, etc.)
+		/// - accommodation (HotelRoom, Apartment, House, Cabin, Capsule)
 		/// - createdAt timestamp
 		/// </remarks>
 		/// <response code="200">List of rooms</response>
